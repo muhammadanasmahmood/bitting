@@ -8,6 +8,7 @@
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)](https://github.com/muhammadanasmahmood/bitting)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-261230)](https://github.com/astral-sh/ruff)
+[![PyPI](https://img.shields.io/pypi/v/bitting.svg)](https://pypi.org/project/bitting/)
 
 ---
 
@@ -47,13 +48,26 @@ The existing options tend to be either trivial header-checkers that compare agai
 
 ## Installation
 
-bitting is not yet on PyPI (publication is on the roadmap). Install directly from GitHub:
+Install from PyPI:
+
+```bash
+pip install bitting
+```
+
+Optional extras:
+
+```bash
+pip install 'bitting[fastapi]'    # FastAPI integration
+pip install 'bitting[argon2]'     # Argon2id hasher
+```
+
+Or install the development version directly from GitHub:
 
 ```bash
 pip install git+https://github.com/muhammadanasmahmood/bitting.git
 ```
 
-Optional extras, using direct-reference syntax (works with pip 21.3+):
+Extras with direct-reference syntax (works with pip 21.3+):
 
 ```bash
 pip install 'bitting[fastapi] @ git+https://github.com/muhammadanasmahmood/bitting.git'   # FastAPI integration
@@ -242,7 +256,7 @@ The suite covers: key format and checksum properties (including single-character
 - [ ] Optional pepper support in both hashers
 - [ ] SQLAlchemy/PostgreSQL adapter in a companion package
 - [ ] Verification-result caching helper (TTL-bounded, with revocation hooks)
-- [ ] PyPI publication
+- [x] PyPI publication — bitting is [on PyPI](https://pypi.org/project/bitting/) since 1.2.0
 
 ## Limitations
 
@@ -261,6 +275,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Every PR must keep `pytest`, `ruff`, and
 ## Contributors
 
 - **[Muhammad Anas Mahmood](https://github.com/muhammadanasmahmood)** — Project Owner & Maintainer · architecture, releases, and repository stewardship
+  · <anasmahmood2917@gmail.com> · Karachi, Pakistan
 
 See [CONTRIBUTORS.md](CONTRIBUTORS.md) for roles and how contributions are credited.
 
