@@ -1,0 +1,108 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bitting"
+version = "1.2.0"
+description = "API key lifecycle management for Python: generation, memory-hard hashing, prefix-indexed storage, rotation with grace periods, scopes, TTL, and audit events."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Muhammad Anas Mahmood" }]
+keywords = [
+    "api-key",
+    "api-keys",
+    "authentication",
+    "security",
+    "hashing",
+    "scrypt",
+    "argon2",
+    "rotation",
+    "scopes",
+    "fastapi",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+dependencies = []
+
+[project.optional-dependencies]
+argon2 = ["argon2-cffi>=23.1"]
+fastapi = ["fastapi>=0.110"]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+    "mypy>=1.10",
+    "httpx>=0.27",
+    "hypothesis>=6.100",
+]
+
+[project.urls]
+Homepage = "https://github.com/muhammadanasmahmood/bitting"
+Repository = "https://github.com/muhammadanasmahmood/bitting"
+Issues = "https://github.com/muhammadanasmahmood/bitting/issues"
+Changelog = "https://github.com/muhammadanasmahmood/bitting/blob/main/CHANGELOG.md"
+
+[project.scripts]
+bitting = "bitting.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+bitting = ["py.typed"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+    "RUF", # ruff-specific
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Examples are intentionally linear scripts
+"examples/*" = ["E501", "B008"]
+# FastAPI's canonical dependency-injection idiom
+"src/bitting/integrations/fastapi.py" = ["B008"]
+"tests/test_fastapi_integration.py" = ["B008"]
+"tests/test_validation_regressions.py" = ["B008"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+files = ["src"]
+mypy_path = "src"
+
+[[tool.mypy.overrides]]
+module = "argon2.*"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+# Make the repo root importable (tests/conftest helpers) regardless of
+# whether pytest is invoked as `pytest` or `python -m pytest`.
+pythonpath = ["."]

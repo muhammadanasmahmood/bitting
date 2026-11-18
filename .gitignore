@@ -1,0 +1,39 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Environments
+.env
+.env.*
+.venv/
+venv/
+env/
+
+# Build output
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Key databases (never commit key stores)
+*.db
+*.sqlite
+*.sqlite3
+
+# Dependency directories
+node_modules/
+
+# IDE
+.idea/
+.vscode/
+
+# Logs and OS
+*.log
+.DS_Store

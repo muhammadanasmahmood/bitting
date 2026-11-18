@@ -1,0 +1,15 @@
+# Ship the full test suite in the sdist. setuptools' default sdist file
+# list includes only tests/test*.py — without this, conftest.py is omitted
+# and `pytest` on an unpacked sdist fails at collection.
+include tests/conftest.py
+
+# Operator-relevant documentation beyond the README (README itself and
+# LICENSE are included automatically).
+include CHANGELOG.md
+include SECURITY.md
+include CONTRIBUTING.md
+include CONTRIBUTORS.md
+
+# Ship the runnable examples too, so the documented quality gate
+# (ruff check src tests examples) works from an unpacked sdist.
+include examples/*.py
