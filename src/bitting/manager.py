@@ -175,10 +175,27 @@ class KeyManager:
                 )
             self._hashers[name] = candidate
         self._env = validate_env_label(env)
+        if not callable(now_fn):
+            raise ConfigurationError("now_fn must be callable")
         self._now_fn = now_fn
         self._on_event = on_event
+        if not isinstance(verify_touch_interval, timedelta):
+            raise ConfigurationError(
+                "verify_touch_interval must be a datetime.timedelta, got "
+                f"{type(verify_touch_interval).__name__}"
+            )
         self._verify_touch_interval = verify_touch_interval
         self._audit_verifications = audit_verifications
+        # The library is documented to never use naive datetimes. A naive
+        # clock only explodes later — mid-verify, as a TypeError escaping
+        # the "verify never raises for a bad key" contract (e.g. when an
+        # aware expires_at is compared against it). Fail fast instead.
+        probe = now_fn()
+        if not isinstance(probe, datetime) or probe.tzinfo is None:
+            raise ConfigurationError(
+                "now_fn must return timezone-aware datetime objects "
+                "(a naive clock breaks every lifecycle comparison)"
+            )
         if LEGACY_STORE_WARNING:
             missing = [
                 name
@@ -271,6 +288,30 @@ class KeyManager:
             json.dumps(stored_metadata)
         except (TypeError, ValueError) as exc:
             raise ValueError("metadata must be JSON-serializable") from exc
+
+        # json.dumps accepts non-string keys by coercing them to strings,
+        # but the in-memory store keeps them as-is — the same metadata then
+        # round-trips differently across stores ({1: 'a'} vs {'1': 'a'}).
+        # Reject non-string keys anywhere in the nested structure (objects
+        # and the objects inside arrays) so both stores agree. The walk is
+        # iterative: deeply nested metadata must not hit the interpreter's
+        # recursion limit here (json.dumps itself raises ValueError on
+        # circular references, so cycles cannot loop forever).
+        stack: list[tuple[Any, str]] = [(stored_metadata, "")]
+        while stack:
+            node, path = stack.pop()
+            if isinstance(node, dict):
+                for key, value in node.items():
+                    if not isinstance(key, str):
+                        raise ValueError(
+                            f"metadata keys must be strings at {path or 'top level'!r} "
+                            "(JSON object keys are strings; non-string keys "
+                            "round-trip differently across stores)"
+                        )
+                    stack.append((value, f"{path}.{key}" if path else key))
+            elif isinstance(node, (list, tuple)):
+                for index, value in enumerate(node):
+                    stack.append((value, f"{path}[{index}]"))
         # store.save() is an upsert by contract, so a prefix collision would
         # silently overwrite somebody else's key. 16 base62 characters make
         # that astronomically unlikely, but "unlikely" is not "impossible"

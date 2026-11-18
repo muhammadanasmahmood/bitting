@@ -42,6 +42,12 @@ __all__ = ["InMemoryStore", "KeyStore", "SQLiteStore"]
 _WAL_RETRY_ATTEMPTS = 40
 _WAL_RETRY_DELAY = 0.05
 
+#: SQLite integers are signed 64-bit; bind parameters outside that range
+#: raise OverflowError from the driver. Used to validate ``limit`` before
+#: it reaches SQL (a Python-only store has no such bound, but the store
+#: contract keeps both implementations' validation identical).
+_SQLITE_MAX_INT = 2**63 - 1
+
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS keys (
     prefix            TEXT PRIMARY KEY,
@@ -230,6 +236,10 @@ class InMemoryStore(KeyStore):
     def list_events(self, *, limit: int = 100) -> list[AuditEvent]:
         if limit < 1:
             raise ValueError("limit must be >= 1")
+        if limit > _SQLITE_MAX_INT:
+            # Keep validation identical across both stores (see the
+            # SQLiteStore note): a nonsensical limit is a caller error.
+            raise ValueError(f"limit must be <= {_SQLITE_MAX_INT}")
         with self._lock:
             return [
                 replace(event, detail=deepcopy(event.detail))
@@ -339,10 +349,19 @@ def _row_to_record(row: sqlite3.Row) -> KeyRecord:
             metadata=metadata,
             supersedes=row["supersedes"],
         )
-    except (ValueError, TypeError, KeyError) as exc:
+    except (ValueError, TypeError, KeyError, IndexError) as exc:
         # A corrupted or crafted row must surface as a predictable
-        # StorageError, never a raw JSON/ISO parsing exception.
-        raise StorageError(f"corrupted key record for prefix {row['prefix']!r}: {exc}") from exc
+        # StorageError, never a raw JSON/ISO parsing exception. IndexError
+        # covers rows written by a legacy schema whose column set differs
+        # (e.g. a missing ``last_verified_at``): ``sqlite3.Row`` raises
+        # "No item with that key" when a mapped column is absent.
+        # The prefix itself may be the missing column (or unreadable), so
+        # it must not be used to build the error message.
+        try:
+            prefix_hint = f" for prefix {row['prefix']!r}"
+        except (IndexError, KeyError):  # pragma: no cover - doubly-corrupt row
+            prefix_hint = ""
+        raise StorageError(f"corrupted key record{prefix_hint}: {exc}") from exc
 
 
 class SQLiteStore(KeyStore):
@@ -521,6 +540,10 @@ class SQLiteStore(KeyStore):
     def list_events(self, *, limit: int = 100) -> list[AuditEvent]:
         if limit < 1:
             raise ValueError("limit must be >= 1")
+        if limit > _SQLITE_MAX_INT:
+            # SQLite integers are signed 64-bit; an out-of-range Python
+            # int previously leaked a raw OverflowError from the driver.
+            raise ValueError(f"limit must be <= {_SQLITE_MAX_INT}")
         try:
             with self._lock:
                 rows = self._conn.execute(

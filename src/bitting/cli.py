@@ -20,7 +20,7 @@ from .errors import BittingError
 from .hashing import ScryptHasher
 from .manager import KeyManager
 from .models import KeyRecord
-from .storage import SQLiteStore
+from .storage import _SQLITE_MAX_INT, SQLiteStore
 from .timeutil import parse_duration
 
 __all__ = ["build_parser", "main"]
@@ -230,6 +230,12 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "events":
+            # argparse's type=int accepts any Python int; guard the range
+            # (shared bound with the stores) before it reaches SQL so the
+            # user sees the clean "error:" line instead of a traceback.
+            if args.limit < 1 or args.limit > _SQLITE_MAX_INT:
+                print(f"error: --limit must be between 1 and {_SQLITE_MAX_INT}", file=sys.stderr)
+                return 1
             events = manager.list_events(limit=args.limit)
             if args.as_json:
                 print(json.dumps([event.to_json() for event in events], indent=2))

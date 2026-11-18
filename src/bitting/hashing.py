@@ -82,6 +82,13 @@ _MAX_DIGEST_LENGTH = 512
 _ARGON2_MAX_WORK = 2**23
 #: Independent ceiling on stored Argon2id time_cost (passes).
 _ARGON2_MAX_T_STRICT = 4096
+#: Ceiling on the memory a *stored* (non-own-config) Argon2id hash may
+#: demand per verification, in KiB — the argon2 analog of scrypt's
+#: ``maxmem``. Bounding total work alone still admitted e.g. m=1 GiB x
+#: t=7 (within 2**23) — a ~1 GiB allocation per crafted record verified.
+#: 256 MiB covers deliberately heavy real deployments (RFC 9106 second
+#: recommended option: m=256 MiB, t=3) while capping crafted records.
+_ARGON2_STORED_MAX_M = 256 * 1024
 
 #: Total scrypt work (``n * r * p``) of the documented default profile.
 #: Used as the floor for the stored-hash work budget below.
@@ -482,7 +489,9 @@ class Argon2Hasher:
             ):
                 return False
             if not own_config and (
-                params["t"] > _ARGON2_MAX_T_STRICT or params["t"] * params["m"] > _ARGON2_MAX_WORK
+                params["t"] > _ARGON2_MAX_T_STRICT
+                or params["t"] * params["m"] > _ARGON2_MAX_WORK
+                or params["m"] > _ARGON2_STORED_MAX_M
             ):
                 return False
         except (ValueError, IndexError):
