@@ -225,13 +225,13 @@ Authentication failures return `401` (with `WWW-Authenticate: ApiKey`); missing 
 
 ```bash
 pip install -e '.[dev,fastapi,argon2]'
-pytest                 # 396 tests
+pytest                 # 427 tests
 ruff check src tests examples
 ruff format --check src tests examples
 mypy                   # strict mode
 ```
 
-The suite covers: key format and checksum properties (including single-character tamper detection), both hashers (including one test at full production scrypt cost and one above the old 256 MiB memory cap), parameter-bound hardening against crafted stored hashes, both stores (including persistence, WAL mode, 40 concurrent saves across 8 threads, record isolation, and atomic rotation claims), the full manager lifecycle state machine (including the expiry-capped grace window and deterministic concurrent-rotation races), the audit trail (including throttling controls and pruning), the CLI (issue → verify → rotate → revoke → list → events, JSON output, and stdin key input), and the FastAPI integration (401/403 semantics in both auto_error modes, bearer mode, record injection).
+The suite covers: key format and checksum properties (including single-character tamper detection), both hashers (including one test at full production scrypt cost and one above the old 256 MiB memory cap), parameter-bound hardening against crafted stored hashes, both stores (including persistence, WAL mode, 40 concurrent saves across 8 threads, record isolation, and atomic rotation claims), the full manager lifecycle state machine (including the expiry-capped grace window and deterministic concurrent-rotation races), the audit trail (including throttling controls and pruning), the CLI (issue → verify → rotate → revoke → list → events, JSON output, and stdin key input), and the FastAPI integration (401/403 semantics in both auto_error modes, bearer mode, record injection). The regression suite additionally pins error-contract behavior: legacy-schema rows surface as `StorageError`, `list_events` limit ranges are validated in both stores and the CLI, clocks and touch intervals are rejected at construction, non-string metadata keys are refused anywhere in the nested structure with the offending path named, stored Argon2id memory is capped, and revoked/expired/rotated-out-of-grace keys are denied before the KDF runs.
 
 ## Deployment
 
@@ -282,5 +282,7 @@ See [CONTRIBUTORS.md](CONTRIBUTORS.md) for roles and how contributions are credi
 ## License
 
 [MIT](LICENSE) © Muhammad Anas Mahmood
+
+## Limitations: caller responsibilities
 
 - **Bound what you store in metadata and how many scopes you grant.** `issue()` accepts any JSON-serializable metadata and any number of valid scopes; a 10 MB metadata blob or a 100k-scope key is accepted today and stored whole, and `verify()` cost grows with the product of granted×required scopes (`missing_scopes` is O(granted × required) — 100k×100 ≈ 1 s). Cap sizes and counts at the application layer before they reach the library.

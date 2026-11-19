@@ -46,7 +46,7 @@ from .models import (
 from .storage import InMemoryStore, KeyStore, SQLiteStore
 from .timeutil import parse_duration
 
-__version__ = "1.2.0"
+__version__ = "1.2.2"
 
 __all__ = [
     "DEFAULT_ROTATION_GRACE",

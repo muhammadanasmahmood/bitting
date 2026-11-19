@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bitting"
-version = "1.2.0"
+version = "1.2.2"
 description = "API key lifecycle management for Python: generation, memory-hard hashing, prefix-indexed storage, rotation with grace periods, scopes, TTL, and audit events."
 readme = "README.md"
 requires-python = ">=3.10"

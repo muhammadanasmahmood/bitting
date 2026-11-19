@@ -6,8 +6,50 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-11-19
+
 ### Fixed
 
+- **Robustness and input-validation hardening** — six defects, each with
+  a regression test in `tests/test_regressions.py` that fails on the
+  pre-fix code:
+  - **Legacy-schema rows raise `StorageError`** (was a raw `IndexError`):
+    a database whose `keys` table was written by an older schema (e.g.
+    missing `last_verified_at`, or even `prefix`) now fails with the
+    documented `StorageError("corrupted key record ...")` on
+    `find_by_prefix`/`list_keys` instead of leaking `sqlite3.Row`'s
+    "No item with that key".
+  - **`list_events(limit=...)` validates its range**: limits above
+    SQLite's signed-64-bit maximum previously leaked a raw
+    `OverflowError` from the driver; both stores now raise
+    `ValueError` (consistent with the existing `limit < 1` guard), and
+    the CLI `events --limit` prints its clean `error:` line (exit 1)
+    instead of a traceback.
+  - **`KeyManager` validates its clock at construction**: a `now_fn`
+    that is not callable, returns a non-datetime, or returns *naive*
+    datetimes is now rejected with `ConfigurationError`. Previously a
+    naive clock was accepted and later exploded inside `verify()` as a
+    `TypeError` — violating the documented "verify never raises for a
+    bad key" contract.
+  - **`verify_touch_interval` type validated at construction**
+    (`timedelta` expected; `None`/`int` now fail fast instead of
+    raising `TypeError` at the first verification).
+  - **`issue()` rejects non-string metadata keys anywhere in the
+    (nested) mapping**: JSON object keys are strings, and non-string
+    keys round-tripped differently across stores (`{1: 'a'}` in memory
+    vs `{'1': 'a'}` in SQLite). Now a `ValueError` naming the offending
+    path.
+  - **Stored (non-own-config) Argon2id hashes are memory-capped**:
+    crafted records could previously demand up to ~1 GiB per
+    verification (the total-work cap alone admitted `m=1 GiB, t=7`).
+    Stored-parameter memory is now capped at 256 MiB — mirroring
+    scrypt's `maxmem` — while a hasher's *own* configuration is exempt
+    at any memory cost, and the RFC 9106 second-recommended profile
+    (`m=256 MiB, t=3`) keeps verifying. Measured: the crafted
+    1 GiB record went from a 5.4 s KDF run to a pre-KDF rejection.
+  - Regression tests also pin that revoked, expired and
+    rotated-out-of-grace keys are denied **before** the KDF runs (a
+    previously untested cost property).
 - **`ScryptHasher` rejects `r=1` with `n >= 2^16` at construction**: these
   in-bounds, under-ceiling configurations were accepted but every `hash()`
   call raised a raw OpenSSL `ValueError` ("memory limit exceeded")
